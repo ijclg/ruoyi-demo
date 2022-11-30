@@ -4,12 +4,12 @@
 name: build-and-deploy
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - main
 
 jobs:
-  build:
-
+  build-server:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,9 +24,10 @@ jobs:
         distribution: 'temurin'
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
+        cache: 'maven'
 
     - name: Build with Maven
-      run: mvn -B -e package
+      run: mvn -B package
 
     - name: SSH Server Deploy
       uses: kostya-ten/ssh-server-deploy@v4
@@ -38,7 +39,52 @@ jobs:
           scp_source: ./build/*
           scp_target: /www/wwwroot
           before_script: |
-            df -h
+            ls -lh
           after_script: |
-            cd /www/wwwroot
-            ls -l
+            ls -lh
+  
+  build-ui:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: set up node
+      uses: actions/setup-node@v1
+      with:
+        node-version: '14'
+        cache: 'npm'
+    - name: build
+      run: |
+           cd ./ruoyi-ui
+           npm install
+           npm run build:prod
+    - name: SSH Server Deploy
+      uses: kostya-ten/ssh-server-deploy@v4
+      with:
+        host: ${{ secrets.TENCENT_SERVER_HOST }}
+        port: ${{ secrets.TENCENT_SERVER_PORT }}
+        username: ${{ secrets.TENCENT_SERVER_USERNAME }}
+        private_key: ${{ secrets.TENCENT_PRIVATE_KEY }}
+        scp_source: ./build/*
+        scp_target: /www/wwwroot
+        before_script: |
+          ls -lh
+        after_script: |
+          ls -lh
+#  deploy-job:
+#    runs-on: ubuntu-latest
+#    needs: [build-server, build-ui]
+#    steps:
+#    - name: SSH Server Deploy
+#      uses: kostya-ten/ssh-server-deploy@v4
+#      with:
+#        host: ${{ secrets.TENCENT_SERVER_HOST }}
+#        port: ${{ secrets.TENCENT_SERVER_PORT }}
+#        username: ${{ secrets.TENCENT_SERVER_USERNAME }}
+#        private_key: ${{ secrets.TENCENT_PRIVATE_KEY }}
+#        scp_source: ./dist/*
+#        scp_target: /www/wwwroot
+#        before_script: |
+#          df -h
+#        after_script: |
+#          cd /www/wwwroot
+#          ls -l
