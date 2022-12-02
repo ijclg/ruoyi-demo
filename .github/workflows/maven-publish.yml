@@ -45,8 +45,7 @@ jobs:
             ls -lh
           after_script: |
             echo ${{ env.DEPLOYPATH }}/${{ env.PROJECT }}
-            cd ${{ env.DEPLOYPATH }}/${{ env.PROJECT }} && ry.sh restart
-            ${{ env.DEPLOYPATH }}/${{ env.PROJECT }}/ry.sh restart
+            sh ${{ env.DEPLOYPATH }}/${{ env.PROJECT }}/ry.sh restart
   
   build-ui:
     runs-on: ubuntu-latest
